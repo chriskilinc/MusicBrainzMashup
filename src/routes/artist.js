@@ -6,6 +6,6 @@ router.get('/', (req, res) => {
   res.send(JSON.stringify('api/artist/id'));
 });
 
-router.get('/:id', controllerArtist.getArtistFromMusicBrainz);
+router.get('/:id', controllerArtist.getArtist);
 
 module.exports = router;
