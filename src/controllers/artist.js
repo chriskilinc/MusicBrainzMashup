@@ -8,11 +8,18 @@ async function getArtist(req, res, next) {
   if (validator.isUUID(mbid)) {
     try {
       let artist = await fetchArtistFromMusicBrainz(mbid);
+      let artistDescription = await fetchDescFromWikipedia(artist.wikipediaUrl);
+      delete artist.wikipediaUrl;
+      artist.description = artistDescription;
 
       res.setHeader('Content-Type', 'application/json');
       res.send(JSON.stringify(artist));
     } catch (error) {
       console.log(error);
+      res
+        .status(500)
+        .send(JSON.stringify('Unexpected Error'))
+        .end();
     }
   } else {
     res
@@ -22,6 +29,28 @@ async function getArtist(req, res, next) {
 }
 module.exports = { getArtist };
 
+//  WikiPedia Utils
+async function fetchDescFromWikipedia(wikipediaUrl) {
+  const apiUrl = 'https://en.wikipedia.org/w/api.php';
+  const wikiTitle = wikipediaUrl.replace(/.+?\/wiki\//, ''); //  Replaces everything that matches before /wiki/
+
+  const fetchUrl = `${apiUrl}?action=query&format=json&prop=extracts&exintro=true&redirects=true&titles=${wikiTitle}`;
+  // console.log(fetchUrl);
+  //  Fetch
+  try {
+    const response = await axios.get(fetchUrl);
+    const wikiDescription = response.data.query.pages[
+      Object.keys(response.data.query.pages)[0]
+    ].extract
+      .match(/.+?<\/p>/)
+      .pop();
+    return wikiDescription;
+  } catch (error) {
+    // console.log(error.response.data);
+    throw new Error('Could not fetch Wikipedia Api');
+  }
+}
+
 //  MusicBrainz Utils
 
 function fetchArtistFromMusicBrainz(mbid) {
@@ -29,31 +58,42 @@ function fetchArtistFromMusicBrainz(mbid) {
   return axios
     .get(`${apiUrl}artist/${mbid}?inc=release-groups+url-rels&fmt=json`)
     .then(artist => {
-      console.log(artist.data.relations);
-      return createArtistObject(artist);
+      return createArtistObjectFromMusicBrainz(artist);
     });
 }
 
-function createArtistObject(artist) {
+function createArtistObjectFromMusicBrainz(artist) {
   return {
     mbid: artist.data.id,
     name: artist.data.name,
-    type: artist.data.type,
+    description: '',
     country: artist.data.area.name,
-    albums: filterArtistReleasesToIncludeAlbums(
-      artist.data['release-groups'],
-      true
-    )
-    //  If more than just releases with the type 'Albums' should be returned, this will work
-    // 'other-releases': filterArtistReleasesToIncludeAlbums(
-    //   artist.data['release-groups'],
-    //   false
-    // )
+    wikipediaUrl: filterMusicBrainsArtistForRelationTypeUrl(
+      artist,
+      'wikipedia'
+    ),
+    albums: filterArtistReleasesToIncludeAlbums(artist, true)
   };
 }
 
+//  This function will return the relation URL for the Relation Type Parameter
+function filterMusicBrainsArtistForRelationTypeUrl(mbArtist, relationType) {
+  let filteredMbArtist = mbArtist.data.relations.filter(
+    relation => relation.type == relationType
+  )[0];
+
+  if (filteredMbArtist) {
+    return filteredMbArtist.url.resource;
+  } else {
+    return null;
+  }
+}
+
+//  If passed FALSE, returns all types of releases EXCEPT releases with type 'album'
+//  Can be used if want to return an object with 'other-releases'
+//  It might be pleasant for the caller to know what kind of release they are fetching. Therefor 'type' should be available/returned
 filterArtistReleasesToIncludeAlbums = (release, toInclude) => {
-  return release
+  return release.data['release-groups']
     .filter(
       release =>
         (release['primary-type'].toLowerCase() === 'album') === toInclude
@@ -62,8 +102,8 @@ filterArtistReleasesToIncludeAlbums = (release, toInclude) => {
       return (release = {
         title: release.title,
         id: release.id,
-        'first-released': release['first-release-date'],
-        type: release['primary-type']
+        'first-released': release['first-release-date']
+        // type: release['primary-type']
       });
     });
 };
