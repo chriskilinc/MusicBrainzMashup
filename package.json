@@ -4,7 +4,8 @@
   "description": "REST API for retrieving Artist Data from different API:s",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "dev":"nodemon src/index.js"
   },
   "author": "chriskilinc",
   "license": "ISC",
