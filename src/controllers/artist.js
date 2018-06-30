@@ -8,9 +8,22 @@ async function getArtist(req, res, next) {
   if (validator.isUUID(mbid)) {
     try {
       let artist = await fetchArtistFromMusicBrainz(mbid);
-      let artistDescription = await fetchDescFromWikipedia(artist.wikipediaUrl);
+      const artistDescription = await fetchDescFromWikipedia(
+        artist.wikipediaUrl
+      );
+      // artist.description = artistDescription;
+      // const albumCoverArt = await fetchCoverArt();
+
+      const albumCoverArt = artist.albums.map(async album => {
+        let image = await fetchCoverArt(album.id);
+        console.log(album.title + ' : ' + image);
+      });
+
+      // console.log(albumCoverArt);
+
       delete artist.wikipediaUrl;
-      artist.description = artistDescription;
+
+      //  Proimise.All
 
       res.setHeader('Content-Type', 'application/json');
       res.send(JSON.stringify(artist));
@@ -23,20 +36,29 @@ async function getArtist(req, res, next) {
     }
   } else {
     res
-      .status(404)
+      .status(400)
       .send(`'${mbid}' is not an accepted Music Brainz Identifier`);
   }
 }
 module.exports = { getArtist };
 
+//  CoverArtArchve
+async function fetchCoverArt(albumId) {
+  const apiUrl = 'https://coverartarchive.org';
+  const fetchUrl = `${apiUrl}/release-group/${albumId}`;
+  try {
+    const response = await axios.get(fetchUrl);
+    return response.data.images[0].image;
+  } catch (error) {
+    return error.response.statusText;
+  }
+}
+
 //  WikiPedia Utils
 async function fetchDescFromWikipedia(wikipediaUrl) {
   const apiUrl = 'https://en.wikipedia.org/w/api.php';
   const wikiTitle = wikipediaUrl.replace(/.+?\/wiki\//, ''); //  Replaces everything that matches before /wiki/
-
   const fetchUrl = `${apiUrl}?action=query&format=json&prop=extracts&exintro=true&redirects=true&titles=${wikiTitle}`;
-  // console.log(fetchUrl);
-  //  Fetch
   try {
     const response = await axios.get(fetchUrl);
     const wikiDescription = response.data.query.pages[
@@ -46,7 +68,6 @@ async function fetchDescFromWikipedia(wikipediaUrl) {
       .pop();
     return wikiDescription;
   } catch (error) {
-    // console.log(error.response.data);
     throw new Error('Could not fetch Wikipedia Api');
   }
 }
