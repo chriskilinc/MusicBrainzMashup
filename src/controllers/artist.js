@@ -1,32 +1,36 @@
-const validator = require('validator');
 const axios = require('axios');
+const { isUuid } = require('../utilities/validators');
 
-async function getArtist(req, res, next) {
-  // res.end();
+async function getArtist(req, res) {
   const mbid = req.params.id;
-
-  if (validator.isUUID(mbid)) {
+  res.setHeader('Content-Type', 'application/json');
+  if (isUuid(mbid)) {
     try {
-      let artist = await fetchArtistFromMusicBrainz(mbid);
-      const artistDescription = await fetchDescFromWikipedia(
-        artist.wikipediaUrl
-      );
-      // artist.description = artistDescription;
-      // const albumCoverArt = await fetchCoverArt();
+      //  Fetches Aritst from MusicBrains and Returns a Artist Object
+      let artistModel = await fetchArtistFromMusicBrainz(mbid);
 
-      const albumCoverArt = artist.albums.map(async album => {
+      //  Fetches Wikipedia and returns a short description
+      const artistDescription = await fetchDescFromWikipedia(
+        artistModel.wikipediaUrl
+      );
+      //  Fetches CoverArtArchive and returns Album Art for each Album in artistModel
+      const albumCoverArt = artistModel.albums.map(async album => {
         let image = await fetchCoverArt(album.id);
-        console.log(album.title + ' : ' + image);
+        return { ...album, image };
       });
 
-      // console.log(albumCoverArt);
+      //    Without PROMISE ALL
+      // artist.description = artistDescription;
+      // let mapedAlbumCovers = await Promise.all([...albumCoverArt]);
+      // artist.albums = [...mapedAlbumCovers];
 
-      delete artist.wikipediaUrl;
+      //    PROMISE ALL - Almost 1000ms faster than Without
+      await Promise.all([artistDescription, ...albumCoverArt]).then(res => {
+        artistModel.description = res[0];
+        artistModel.albums = [...res].slice(1);
+      });
 
-      //  Proimise.All
-
-      res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(artist));
+      res.send(JSON.stringify(artistModel));
     } catch (error) {
       console.log(error);
       res
@@ -47,8 +51,9 @@ async function fetchCoverArt(albumId) {
   const apiUrl = 'https://coverartarchive.org';
   const fetchUrl = `${apiUrl}/release-group/${albumId}`;
   try {
-    const response = await axios.get(fetchUrl);
-    return response.data.images[0].image;
+    return await axios.get(fetchUrl).then(response => {
+      return response.data.images[0].image;
+    });
   } catch (error) {
     return error.response.statusText;
   }
@@ -88,7 +93,7 @@ function createArtistObjectFromMusicBrainz(artist) {
     mbid: artist.data.id,
     name: artist.data.name,
     description: '',
-    country: artist.data.area.name,
+    // country: artist.data.area.name,
     wikipediaUrl: filterMusicBrainsArtistForRelationTypeUrl(
       artist,
       'wikipedia'
