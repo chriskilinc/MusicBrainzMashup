@@ -38,7 +38,13 @@ async function getArtist(req, res) {
       // console.log(error.response.data);
       res
         .status(500)
-        .send(JSON.stringify({ message: 'Unexpected Error' }))
+        .send(
+          JSON.stringify({
+            error: {
+              message: 'Unexpected Error'
+            }
+          })
+        )
         .end();
     }
   } else {
