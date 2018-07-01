@@ -29,3 +29,10 @@ $ yarn dev  / npm run dev
 * NodeJs
 * Express
 
+
+
+### Testing
+Unit Testing with Jest
+```sh
+$ yarn test
+```
