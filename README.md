@@ -11,7 +11,7 @@ MusicBrainzMashup was developed to run on at least NodeJs v9.7.1 and has not bee
 
 Production
 ```sh
-$ git clone MusicBrainzMashup
+$ git clone https://github.com/chriskilinc/MusicBrainzMashup
 $ cd MusicBrainzMashup
 $ yarn  /   npm install
 $ yarn start    /   npm start
@@ -19,7 +19,7 @@ $ yarn start    /   npm start
 
 Development
 ```sh
-$ git clone MusicBrainzMashup
+$ git clone https://github.com/chriskilinc/MusicBrainzMashup
 $ cd MusicBrainzMashup
 $ yarn  / npm install
 $ yarn dev  / npm run dev
