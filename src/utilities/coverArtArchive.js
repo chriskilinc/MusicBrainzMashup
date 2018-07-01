@@ -8,7 +8,7 @@ async function fetchCoverArt(albumId) {
       return response.data.images[0].image;
     });
   } catch (error) {
-    throw new Error('Could not fetch CoverArtArchive Api');
+    return error.response.statusText;
   }
 }
 
