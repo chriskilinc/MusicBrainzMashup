@@ -27,7 +27,7 @@ async function getArtist(req, res) {
     //  Fetches CoverArtArchive and returns Album Art for each Album in artistModel
     const albumCoverArt = artistModel.albums.map(async album => {
       let image = await fetchCoverArt(album.id);
-      return { ...album, image };
+      return { ...album, image: image };
     });
 
     //    Without PROMISE ALL
@@ -36,15 +36,13 @@ async function getArtist(req, res) {
     // artist.albums = [...mapedAlbumCovers];
 
     //    PROMISE ALL - Almost 1000ms faster than Without
-    await Promise.all([artistDescription, ...albumCoverArt]).then(res => {
-      artistModel.description = res[0];
-      artistModel.albums = [...res].slice(1);
+    await Promise.all([artistDescription, ...albumCoverArt]).then(response => {
+      artistModel.description = response[0];
+      artistModel.albums = [...response].slice(1);
       delete artistModel.wikipediaUrl;
     });
-
-    res.send(JSON.stringify(artistModel));
+    res.send(artistModel);
   } catch (error) {
-    // console.log(error.response.data);
     res
       .status(500)
       .send(
