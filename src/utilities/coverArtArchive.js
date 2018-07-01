@@ -1,7 +1,7 @@
 const axios = require('axios');
+const apiUrl = 'https://coverartarchive.org';
 
 async function fetchCoverArt(albumId) {
-  const apiUrl = 'https://coverartarchive.org';
   const fetchUrl = `${apiUrl}/release-group/${albumId}`;
   try {
     return await axios.get(fetchUrl).then(response => {
