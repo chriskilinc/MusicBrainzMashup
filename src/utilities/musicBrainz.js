@@ -8,7 +8,7 @@ function fetchArtistFromMusicBrainz(mbid) {
         return createArtistObjectFromMusicBrainz(artist);
       });
   } catch (error) {
-    throw new Error('Could not Fetch MusicBrainz');
+    throw new Error('Could not Fetch MusicBrainz api');
   }
 }
 
